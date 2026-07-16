@@ -1,6 +1,6 @@
 #include <Arduino.h>
-#include <TinyGsmClient.h>
 #include <ArduinoJson.h>
+#include <TinyGsmClient.h>
 
 // --- Configuration ---
 #define APN "internet" // Update based on local telecom provider
@@ -9,14 +9,14 @@
 #define SUPABASE_URL "dummy-preview-project.supabase.co"
 
 // --- Hardware Pins (LILYGO T-Call A7670) ---
-#define MODEM_TX      27
-#define MODEM_RX      26
-#define MODEM_PWRKEY  4
-#define MODEM_DTR     32
-#define MODEM_RI      33
-#define MODEM_FLIGHT  25
-#define MODEM_STATUS  34
-#define BAT_ADC       35
+#define MODEM_TX 27
+#define MODEM_RX 26
+#define MODEM_PWRKEY 4
+#define MODEM_DTR 32
+#define MODEM_RI 33
+#define MODEM_FLIGHT 25
+#define MODEM_STATUS 34
+#define BAT_ADC 35
 
 // --- Global Objects ---
 HardwareSerial SerialAT(1);
@@ -59,8 +59,10 @@ void setup() {
   modemPowerOn();
 
   // Initialize FreeRTOS Tasks
-  xTaskCreatePinnedToCore(TaskGPSManager, "GPSManager", 4096, NULL, 1, &GPSManagerTaskHandle, 1);
-  xTaskCreatePinnedToCore(TaskLTEManager, "LTEManager", 8192, NULL, 2, &LTEManagerTaskHandle, 1);
+  xTaskCreatePinnedToCore(TaskGPSManager, "GPSManager", 4096, NULL, 1,
+                          &GPSManagerTaskHandle, 1);
+  xTaskCreatePinnedToCore(TaskLTEManager, "LTEManager", 8192, NULL, 2,
+                          &LTEManagerTaskHandle, 1);
 }
 
 void modemPowerOn() {
@@ -75,22 +77,22 @@ void modemPowerOn() {
 
 int readBatteryPercentage() {
   int raw = analogRead(BAT_ADC);
-  float voltage = (raw / 4095.0) * 3.3 * 2.0; 
+  float voltage = (raw / 4095.0) * 3.3 * 2.0;
   int pct = map(voltage * 100, 320, 420, 0, 100);
-  if (pct > 100) return 100;
-  if (pct < 0) return 0;
+  if (pct > 100)
+    return 100;
+  if (pct < 0)
+    return 0;
   return pct;
 }
 
-void loop() {
-  vTaskDelay(pdMS_TO_TICKS(1000));
-}
+void loop() { vTaskDelay(pdMS_TO_TICKS(1000)); }
 
 void TaskGPSManager(void *pvParameters) {
   GPSRecord record;
   TickType_t lastSendTime = xTaskGetTickCount();
   const TickType_t sendInterval = pdMS_TO_TICKS(15000); // 15 seconds
-  
+
   // Wait for modem to initialize before turning on GPS
   vTaskDelay(pdMS_TO_TICKS(5000));
   Serial.println("[GPS] Enabling Integrated Modem GPS...");
@@ -98,20 +100,21 @@ void TaskGPSManager(void *pvParameters) {
 
   for (;;) {
     if (xTaskGetTickCount() - lastSendTime >= sendInterval) {
-      
+
       float lat = 0, lon = 0, speed = 0, alt = 0, accuracy = 0;
       int vsat = 0, usat = 0;
       int year = 0, month = 0, day = 0, hour = 0, min = 0, sec = 0;
-      
+
       // Query the modem's integrated GNSS module
-      bool fix = modem.getGPS(&lat, &lon, &speed, &alt, &vsat, &usat, &accuracy, 
+      bool fix = modem.getGPS(&lat, &lon, &speed, &alt, &vsat, &usat, &accuracy,
                               &year, &month, &day, &hour, &min, &sec);
 
       if (fix && lat != 0.0) {
         record.lat = lat;
         record.lon = lon;
         record.speed_kmh = speed;
-        record.heading_deg = 0; // A7670 GPS doesn't easily expose heading via basic TinyGSM getGPS
+        record.heading_deg = 0; // A7670 GPS doesn't easily expose heading via
+                                // basic TinyGSM getGPS
         record.hdop = accuracy;
         record.satellites = usat;
         record.battery_pct = readBatteryPercentage();
@@ -127,21 +130,21 @@ void TaskGPSManager(void *pvParameters) {
       }
       lastSendTime = xTaskGetTickCount();
     }
-    vTaskDelay(pdMS_TO_TICKS(1000)); 
+    vTaskDelay(pdMS_TO_TICKS(1000));
   }
 }
 
 void TaskLTEManager(void *pvParameters) {
   Serial.println("[LTE] Initializing modem...");
-  
+
   if (!modem.restart()) {
     Serial.println("[LTE] Failed to restart modem");
   }
-  
+
   String modemInfo = modem.getModemInfo();
   Serial.print("[LTE] Modem Info: ");
   Serial.println(modemInfo);
-  
+
   client.setInsecure(); // Disable SSL validation for testing
 
   for (;;) {
@@ -164,11 +167,11 @@ void TaskLTEManager(void *pvParameters) {
     GPSRecord record;
     if (xQueueReceive(gpsQueue, &record, pdMS_TO_TICKS(5000)) == pdPASS) {
       Serial.println("[LTE] Uploading data to Supabase...");
-      
+
       StaticJsonDocument<512> doc;
       JsonArray array = doc.to<JsonArray>();
       JsonObject obj = array.createNestedObject();
-      obj["timestamp"] = "2026-07-17T00:00:00Z"; 
+      obj["timestamp"] = "2026-07-17T00:00:00Z";
       obj["lat"] = record.lat;
       obj["lon"] = record.lon;
       obj["speed_kmh"] = record.speed_kmh;
