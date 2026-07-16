@@ -14,13 +14,15 @@ export default function Events() {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      const { data, error } = await supabase
-        .from('system_events')
-        .select('*')
-        .order('timestamp', { ascending: false })
-        .limit(50)
+      try {
+        const { data, error } = await supabase
+          .from('system_events')
+          .select('*')
+          .order('timestamp', { ascending: false })
+          .limit(50)
 
-      if (data) setEvents(data)
+        if (data) setEvents(data)
+      } catch {}
       setLoading(false)
     }
 
