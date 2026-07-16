@@ -29,8 +29,10 @@ CREATE INDEX IF NOT EXISTS idx_checkpoints_location ON public.checkpoints USING 
 
 -- RLS: authenticated users can read; service_role can write
 ALTER TABLE public.checkpoints ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "checkpoints_read_auth" ON public.checkpoints;
 CREATE POLICY "checkpoints_read_auth"  ON public.checkpoints FOR SELECT TO authenticated USING (true);
-CREATE POLICY "checkpoints_write_auth" ON public.checkpoints FOR ALL    TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "checkpoints_write_service" ON public.checkpoints;
+CREATE POLICY "checkpoints_write_service" ON public.checkpoints FOR ALL TO service_role USING (true);
 
 
 -- ── 2. Checkpoint visits log ──────────────────────────────────
@@ -53,10 +55,10 @@ CREATE INDEX IF NOT EXISTS idx_checkpoint_visits_checkpoint
 
 -- RLS
 ALTER TABLE public.checkpoint_visits ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "checkpoint_visits_read_auth"
-  ON public.checkpoint_visits FOR SELECT TO authenticated USING (true);
-CREATE POLICY "checkpoint_visits_write_service"
-  ON public.checkpoint_visits FOR INSERT TO service_role WITH CHECK (true);
+DROP POLICY IF EXISTS "visits_read_auth" ON public.checkpoint_visits;
+CREATE POLICY "visits_read_auth"  ON public.checkpoint_visits FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "visits_write_service" ON public.checkpoint_visits;
+CREATE POLICY "visits_write_service" ON public.checkpoint_visits FOR ALL TO service_role USING (true);
 
 
 -- ── 3. Geofence trigger function ──────────────────────────────
