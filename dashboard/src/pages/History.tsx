@@ -21,6 +21,14 @@ interface GpsRecord {
   speed_kmh: number; battery_pct: number; timestamp: string
 }
 
+interface CheckpointCompliance {
+  checkpoint_id: string
+  checkpoint_name: string
+  route_order: number | null
+  first_visit: string
+  closest_m: number
+}
+
 function calcDistance(records: GpsRecord[]): number {
   if (records.length < 2) return 0
   return records.reduce((acc, r, i) => {
@@ -37,6 +45,8 @@ function calcDistance(records: GpsRecord[]): number {
 export default function History() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [route, setRoute] = useState<GpsRecord[]>([])
+  const [compliance, setCompliance] = useState<CheckpointCompliance[]>([])
+  const [totalCheckpoints, setTotalCheckpoints] = useState(0)
   const [loading, setLoading] = useState(false)
   const defaultCenter: [number, number] = [15.4912, 120.8321]
 
@@ -46,13 +56,30 @@ export default function History() {
       const start = new Date(date); start.setHours(0, 0, 0, 0)
       const end = new Date(date); end.setHours(23, 59, 59, 999)
 
-      const { data } = await supabase.from('gps_records')
+      // Fetch GPS Route
+      const { data: routeData } = await supabase.from('gps_records')
         .select('id, lat, lon, speed_kmh, battery_pct, timestamp')
         .gte('timestamp', start.toISOString())
         .lte('timestamp', end.toISOString())
         .order('timestamp', { ascending: true })
+      
+      if (routeData) setRoute(routeData as GpsRecord[])
 
-      if (data) setRoute(data as GpsRecord[])
+      // Fetch Checkpoint Compliance
+      const { data: compData } = await supabase.from('daily_checkpoint_compliance')
+        .select('*')
+        .eq('date_ph', date)
+        .order('route_order', { ascending: true })
+      
+      if (compData) setCompliance(compData as CheckpointCompliance[])
+
+      // Fetch Total Active Checkpoints
+      const { count } = await supabase.from('checkpoints')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true)
+      
+      setTotalCheckpoints(count || 0)
+
       setLoading(false)
     }
     fetchRoute()
@@ -128,7 +155,7 @@ export default function History() {
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
           {stats.map(({ label, value, icon, accent }) => (
             <div key={label} className="anim-fade-up" style={{
               background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -143,6 +170,22 @@ export default function History() {
               <div style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em' }}>{value}</div>
             </div>
           ))}
+          
+          {/* Checkpoint Compliance Stat */}
+          <div className="anim-fade-up" style={{
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-md)', padding: '12px 14px',
+            position: 'relative', overflow: 'hidden',
+          }}>
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: '#34d399' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Checkpoints</span>
+            </div>
+            <div style={{ color: 'var(--text-primary)', fontSize: '18px', fontWeight: 700, letterSpacing: '-0.02em' }}>
+              {compliance.length} <span style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 500 }}>/ {totalCheckpoints}</span>
+            </div>
+          </div>
         </div>
       </div>
 

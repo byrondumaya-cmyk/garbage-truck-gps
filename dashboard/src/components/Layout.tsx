@@ -21,6 +21,12 @@ const EventsIcon = () => (
     <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
   </svg>
 )
+const CheckpointIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+)
 const LogoutIcon = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -32,6 +38,7 @@ const LogoutIcon = () => (
 const navigation = [
   { name: 'Live Map',     href: '/',        Icon: MapIcon,     desc: 'Real-time tracking' },
   { name: 'Route History',href: '/history', Icon: HistoryIcon, desc: 'Daily route replay' },
+  { name: 'Checkpoints',  href: '/checkpoints', Icon: CheckpointIcon, desc: 'Route compliance' },
   { name: 'Event Log',   href: '/events',  Icon: EventsIcon,  desc: 'System telemetry' },
 ]
 
