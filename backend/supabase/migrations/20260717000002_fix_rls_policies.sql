@@ -3,30 +3,6 @@
 --            application table policies
 -- ============================================================
 
--- ────────────────────────────────────────────────────────────
--- 1.  spatial_ref_sys  (PostGIS system table)
---
---     Supabase lint flags this because the table is in the
---     `public` schema and exposed to PostgREST, but has no
---     RLS.  The recommended fix is to enable RLS and add a
---     SELECT-only policy for authenticated users, then deny
---     writes entirely (the table is managed by PostGIS only).
--- ────────────────────────────────────────────────────────────
-
-ALTER TABLE public.spatial_ref_sys ENABLE ROW LEVEL SECURITY;
-
--- Allow authenticated dashboard users to read projection data
--- (required by PostGIS geometry functions used by the dashboard).
-DROP POLICY IF EXISTS "spatial_ref_sys_select" ON public.spatial_ref_sys;
-CREATE POLICY "spatial_ref_sys_select"
-  ON public.spatial_ref_sys
-  FOR SELECT
-  TO authenticated
-  USING (true);
-
--- Deny all write operations — this table is PostGIS-managed.
--- No INSERT / UPDATE / DELETE policy = denied by default when
--- RLS is enabled.
 
 
 -- ────────────────────────────────────────────────────────────
