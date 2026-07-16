@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { useEffect, useState } from 'react'
 
 const MapIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -36,6 +37,24 @@ const navigation = [
 
 export default function Layout() {
   const location = useLocation()
+  const [isOnline, setIsOnline] = useState(false)
+
+  useEffect(() => {
+    // Check initial status
+    supabase.from('device_status').select('status').limit(1).single().then(({ data }) => {
+      setIsOnline(data?.status === 'online')
+    })
+    
+    // Listen for live connection changes
+    const channel = supabase.channel('sidebar_status')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'device_status' }, (payload) => {
+        // @ts-ignore
+        setIsOnline(payload.new?.status === 'online')
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -146,17 +165,19 @@ export default function Layout() {
           padding: '12px 14px',
         }}>
           <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>
-            System
+            Fleet Status
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ position: 'relative', display: 'flex' }}>
               <div style={{
                 width: '8px', height: '8px', borderRadius: '50%',
-                background: 'var(--accent)',
-                boxShadow: '0 0 6px var(--accent)',
-              }} className="anim-blink" />
+                background: isOnline ? 'var(--accent)' : '#ef4444',
+                boxShadow: isOnline ? '0 0 6px var(--accent)' : '0 0 6px #ef4444',
+              }} className={isOnline ? "anim-blink" : ""} />
             </div>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>All systems operational</span>
+            <span style={{ color: isOnline ? 'var(--text-secondary)' : '#ef4444', fontSize: '12px' }}>
+              {isOnline ? 'Truck is Online' : 'Truck is Offline'}
+            </span>
           </div>
         </div>
 
