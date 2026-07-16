@@ -22,16 +22,12 @@ max_client_conn = 100
 
 [edge_runtime]
 enabled = true
-port = 54324
 
 [auth]
 enabled = true
-port = 54327
-issuer = "supabase"
 jwt_expiry = 3600
 enable_signup = true
 
 [storage]
 enabled = true
-port = 54323
 file_size_limit = "50MiB"
