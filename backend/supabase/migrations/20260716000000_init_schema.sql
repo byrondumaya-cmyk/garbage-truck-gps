@@ -2,7 +2,7 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- Devices Table
-CREATE TABLE public.devices (
+CREATE TABLE IF NOT EXISTS public.devices (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   device_id TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE public.devices (
 );
 
 -- GPS Records Table
-CREATE TABLE public.gps_records (
+CREATE TABLE IF NOT EXISTS public.gps_records (
   id BIGSERIAL PRIMARY KEY,
   device_id UUID REFERENCES public.devices(id),
   timestamp TIMESTAMPTZ NOT NULL,
@@ -33,11 +33,11 @@ CREATE TABLE public.gps_records (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_gps_records_device_time ON public.gps_records(device_id, timestamp DESC);
-CREATE INDEX idx_gps_records_location ON public.gps_records USING GIST(location);
+CREATE INDEX IF NOT EXISTS idx_gps_records_device_time ON public.gps_records(device_id, timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_gps_records_location ON public.gps_records USING GIST(location);
 
 -- Device Status Table
-CREATE TABLE public.device_status (
+CREATE TABLE IF NOT EXISTS public.device_status (
   device_id UUID PRIMARY KEY REFERENCES public.devices(id),
   last_seen TIMESTAMPTZ,
   last_lat DOUBLE PRECISION,
@@ -53,7 +53,7 @@ CREATE TABLE public.device_status (
 );
 
 -- System Events Table
-CREATE TABLE public.system_events (
+CREATE TABLE IF NOT EXISTS public.system_events (
   id BIGSERIAL PRIMARY KEY,
   device_id UUID REFERENCES public.devices(id),
   event_type TEXT NOT NULL,
@@ -68,7 +68,14 @@ ALTER TABLE public.device_status ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.system_events ENABLE ROW LEVEL SECURITY;
 
 -- Allow authenticated users to view data
+DROP POLICY IF EXISTS "Allow authenticated read access" ON public.devices;
 CREATE POLICY "Allow authenticated read access" ON public.devices FOR SELECT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Allow authenticated read access" ON public.gps_records;
 CREATE POLICY "Allow authenticated read access" ON public.gps_records FOR SELECT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Allow authenticated read access" ON public.device_status;
 CREATE POLICY "Allow authenticated read access" ON public.device_status FOR SELECT USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Allow authenticated read access" ON public.system_events;
 CREATE POLICY "Allow authenticated read access" ON public.system_events FOR SELECT USING (auth.role() = 'authenticated');

@@ -42,6 +42,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trigger to fire after insert on gps_records
+DROP TRIGGER IF EXISTS tr_update_device_status ON public.gps_records;
 CREATE TRIGGER tr_update_device_status
 AFTER INSERT ON public.gps_records
 FOR EACH ROW

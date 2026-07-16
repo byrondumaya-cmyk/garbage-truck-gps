@@ -44,6 +44,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Schedule: run every 60 seconds
+SELECT cron.unschedule('mark-stale-devices-offline');
 SELECT cron.schedule(
   'mark-stale-devices-offline',   -- job name (unique)
   '* * * * *',                    -- every 1 minute

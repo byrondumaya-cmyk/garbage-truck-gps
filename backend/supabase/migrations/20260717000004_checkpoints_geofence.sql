@@ -6,7 +6,7 @@
 -- Each checkpoint is a named geographic point with a radius.
 -- Supervisors manage this table through the dashboard admin UI.
 -- ──────────────────────────────────────────────────────────────
-CREATE TABLE public.checkpoints (
+CREATE TABLE IF NOT EXISTS public.checkpoints (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name        TEXT NOT NULL,                    -- e.g. "Brgy. Poblacion Entrance"
   lat         DOUBLE PRECISION NOT NULL,
@@ -20,12 +20,12 @@ CREATE TABLE public.checkpoints (
 
 -- PostGIS spatial column for fast proximity queries
 ALTER TABLE public.checkpoints
-  ADD COLUMN location GEOGRAPHY(POINT, 4326)
+  ADD COLUMN IF NOT EXISTS location GEOGRAPHY(POINT, 4326)
   GENERATED ALWAYS AS (
     ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography
   ) STORED;
 
-CREATE INDEX idx_checkpoints_location ON public.checkpoints USING GIST(location);
+CREATE INDEX IF NOT EXISTS idx_checkpoints_location ON public.checkpoints USING GIST(location);
 
 -- RLS: authenticated users can read; service_role can write
 ALTER TABLE public.checkpoints ENABLE ROW LEVEL SECURITY;
@@ -37,7 +37,7 @@ CREATE POLICY "checkpoints_write_auth" ON public.checkpoints FOR ALL    TO authe
 -- Automatically populated by the trigger below.
 -- One row per (checkpoint × gps_record) detection event.
 -- ──────────────────────────────────────────────────────────────
-CREATE TABLE public.checkpoint_visits (
+CREATE TABLE IF NOT EXISTS public.checkpoint_visits (
   id              BIGSERIAL PRIMARY KEY,
   checkpoint_id   UUID REFERENCES public.checkpoints(id) ON DELETE CASCADE,
   device_id       UUID REFERENCES public.devices(id),
@@ -46,9 +46,9 @@ CREATE TABLE public.checkpoint_visits (
   distance_m      DOUBLE PRECISION          -- exact distance at detection
 );
 
-CREATE INDEX idx_checkpoint_visits_device_time
+CREATE INDEX IF NOT EXISTS idx_checkpoint_visits_device_time
   ON public.checkpoint_visits(device_id, visited_at DESC);
-CREATE INDEX idx_checkpoint_visits_checkpoint
+CREATE INDEX IF NOT EXISTS idx_checkpoint_visits_checkpoint
   ON public.checkpoint_visits(checkpoint_id, visited_at DESC);
 
 -- RLS
@@ -115,6 +115,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Attach trigger to gps_records
+DROP TRIGGER IF EXISTS tr_check_checkpoints ON public.gps_records;
 CREATE TRIGGER tr_check_checkpoints
 AFTER INSERT ON public.gps_records
 FOR EACH ROW
