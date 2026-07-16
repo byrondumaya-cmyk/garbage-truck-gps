@@ -1,10 +1,37 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
+const MapIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
+    <line x1="9" y1="3" x2="9" y2="18"/>
+    <line x1="15" y1="6" x2="15" y2="21"/>
+  </svg>
+)
+const HistoryIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3v5h5"/>
+    <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/>
+    <polyline points="12 7 12 12 16 14"/>
+  </svg>
+)
+const EventsIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+  </svg>
+)
+const LogoutIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+    <polyline points="16 17 21 12 16 7"/>
+    <line x1="21" y1="12" x2="9" y2="12"/>
+  </svg>
+)
+
 const navigation = [
-  { name: 'Live Map', href: '/', icon: '🗺️', desc: 'Real-time position' },
-  { name: 'History', href: '/history', icon: '📜', desc: 'Route replay' },
-  { name: 'Events', href: '/events', icon: '📋', desc: 'System log' },
+  { name: 'Live Map',     href: '/',        Icon: MapIcon,     desc: 'Real-time tracking' },
+  { name: 'Route History',href: '/history', Icon: HistoryIcon, desc: 'Daily route replay' },
+  { name: 'Event Log',   href: '/events',  Icon: EventsIcon,  desc: 'System telemetry' },
 ]
 
 export default function Layout() {
@@ -12,65 +39,97 @@ export default function Layout() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
-    window.location.reload()
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#0f172a', fontFamily: "'Inter', sans-serif" }}>
-      {/* Sidebar */}
-      <div style={{
-        width: '220px', flexShrink: 0,
-        background: 'rgba(255,255,255,0.03)',
-        borderRight: '1px solid rgba(255,255,255,0.08)',
+    <div style={{
+      display: 'flex', height: '100vh',
+      background: 'var(--bg-base)',
+      fontFamily: "'Inter', sans-serif",
+    }}>
+      {/* ── Sidebar ── */}
+      <aside style={{
+        width: '224px', flexShrink: 0,
+        background: 'var(--bg-surface)',
+        borderRight: '1px solid var(--border)',
         display: 'flex', flexDirection: 'column',
-      }}>
+      }} className="anim-slide-left">
+
         {/* Logo */}
         <div style={{
-          padding: '24px 20px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          padding: '20px 20px 18px',
+          borderBottom: '1px solid var(--border)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
-              width: '36px', height: '36px', borderRadius: '10px',
-              background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+              width: '32px', height: '32px',
+              background: 'linear-gradient(135deg, #00d4aa, #00a87c)',
+              borderRadius: '8px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '18px', flexShrink: 0,
-            }}>🗑️</div>
+              boxShadow: '0 0 20px rgba(0,212,170,0.3)', flexShrink: 0,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#001a14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+              </svg>
+            </div>
             <div>
-              <div style={{ color: '#fff', fontSize: '13px', fontWeight: 700, lineHeight: 1.2 }}>GarbageTrack</div>
-              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '10px' }}>GPS v1.0</div>
+              <div style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: 700, letterSpacing: '-0.01em' }}>GarbageTrack</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '10px', letterSpacing: '0.05em' }}>COMMAND CENTER</div>
             </div>
           </div>
         </div>
 
-        {/* Nav Items */}
-        <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {navigation.map((item) => {
-            const isActive = location.pathname === item.href
+        {/* Nav label */}
+        <div style={{ padding: '18px 20px 8px' }}>
+          <span style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Navigation
+          </span>
+        </div>
+
+        {/* Nav items */}
+        <nav style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          {navigation.map(({ name, href, Icon, desc }, i) => {
+            const isActive = location.pathname === href
             return (
               <Link
-                key={item.name}
-                to={item.href}
+                key={name}
+                to={href}
+                className={`anim-fade-up delay-${i + 1}`}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '12px',
-                  padding: '10px 12px', borderRadius: '10px',
-                  background: isActive ? 'rgba(34,197,94,0.15)' : 'transparent',
-                  border: isActive ? '1px solid rgba(34,197,94,0.3)' : '1px solid transparent',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '9px 12px', borderRadius: 'var(--radius-sm)',
                   textDecoration: 'none',
-                  transition: 'all 0.15s',
+                  background: isActive ? 'rgba(0,212,170,0.1)' : 'transparent',
+                  border: `1px solid ${isActive ? 'rgba(0,212,170,0.25)' : 'transparent'}`,
+                  transition: 'all 0.15s ease',
+                  position: 'relative',
                 }}
               >
-                <span style={{ fontSize: '18px' }}>{item.icon}</span>
-                <div>
-                  <div style={{ color: isActive ? '#22c55e' : 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: 600 }}>
-                    {item.name}
+                <span style={{
+                  color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                  transition: 'color 0.15s',
+                  display: 'flex',
+                }}>
+                  <Icon />
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    fontSize: '13px', fontWeight: isActive ? 600 : 400,
+                    transition: 'color 0.15s',
+                  }}>
+                    {name}
                   </div>
-                  <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px' }}>{item.desc}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '10px', marginTop: '1px' }}>
+                    {desc}
+                  </div>
                 </div>
                 {isActive && (
                   <div style={{
-                    marginLeft: 'auto', width: '6px', height: '6px', borderRadius: '50%',
-                    background: '#22c55e', boxShadow: '0 0 8px #22c55e',
+                    width: '5px', height: '5px', borderRadius: '50%',
+                    background: 'var(--accent)',
+                    boxShadow: '0 0 8px var(--accent)',
+                    flexShrink: 0,
                   }} />
                 )}
               </Link>
@@ -78,34 +137,64 @@ export default function Layout() {
           })}
         </nav>
 
-        {/* Footer */}
-        <div style={{ padding: '12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        {/* System status */}
+        <div style={{
+          margin: '0 12px 12px',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '12px 14px',
+        }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px' }}>
+            System
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ position: 'relative', display: 'flex' }}>
+              <div style={{
+                width: '8px', height: '8px', borderRadius: '50%',
+                background: 'var(--accent)',
+                boxShadow: '0 0 6px var(--accent)',
+              }} className="anim-blink" />
+            </div>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>All systems operational</span>
+          </div>
+        </div>
+
+        {/* Logout */}
+        <div style={{ padding: '0 12px 16px' }}>
           <button
             onClick={handleLogout}
             style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '10px 12px', borderRadius: '10px', border: 'none',
-              background: 'transparent', cursor: 'pointer',
-              color: 'rgba(255,255,255,0.4)', fontSize: '13px',
-              transition: 'all 0.15s',
+              padding: '9px 12px', borderRadius: 'var(--radius-sm)',
+              border: '1px solid transparent', background: 'transparent',
+              color: 'var(--text-muted)', fontSize: '13px',
+              cursor: 'pointer', transition: 'all 0.15s',
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.1)'
-              ;(e.currentTarget as HTMLButtonElement).style.color = '#f87171'
+              const el = e.currentTarget
+              el.style.background = 'rgba(239,68,68,0.08)'
+              el.style.borderColor = 'rgba(239,68,68,0.2)'
+              el.style.color = '#f87171'
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-              ;(e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)'
+              const el = e.currentTarget
+              el.style.background = 'transparent'
+              el.style.borderColor = 'transparent'
+              el.style.color = 'var(--text-muted)'
             }}
           >
-            <span>🚪</span>
-            <span>Logout</span>
+            <LogoutIcon />
+            <span>Sign Out</span>
           </button>
         </div>
-      </div>
+      </aside>
 
-      {/* Main Content */}
-      <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {/* ── Main content ── */}
+      <main style={{
+        flex: 1, overflow: 'hidden',
+        display: 'flex', flexDirection: 'column',
+      }}>
         <Outlet />
       </main>
     </div>

@@ -8,152 +8,180 @@ interface SystemEvent {
   timestamp: string
 }
 
-const eventColors: Record<string, { bg: string; text: string; icon: string }> = {
-  boot: { bg: 'rgba(56,189,248,0.15)', text: '#38bdf8', icon: '🔄' },
-  gps_fix: { bg: 'rgba(34,197,94,0.15)', text: '#22c55e', icon: '📍' },
-  lte_connected: { bg: 'rgba(167,139,250,0.15)', text: '#a78bfa', icon: '📡' },
-  lte_disconnected: { bg: 'rgba(239,68,68,0.15)', text: '#f87171', icon: '❌' },
-  battery_low: { bg: 'rgba(245,158,11,0.15)', text: '#fbbf24', icon: '🪫' },
-  upload_fail: { bg: 'rgba(239,68,68,0.15)', text: '#f87171', icon: '⚠️' },
-  upload_success: { bg: 'rgba(34,197,94,0.15)', text: '#22c55e', icon: '✅' },
+const EVENT_META: Record<string, { color: string; bg: string; label: string }> = {
+  boot:              { color: '#38bdf8', bg: 'rgba(56,189,248,0.08)',  label: 'Boot' },
+  gps_fix:           { color: '#00d4aa', bg: 'rgba(0,212,170,0.08)',   label: 'GPS Fix' },
+  lte_connected:     { color: '#a78bfa', bg: 'rgba(167,139,250,0.08)', label: 'LTE Up' },
+  lte_disconnected:  { color: '#ef4444', bg: 'rgba(239,68,68,0.08)',   label: 'LTE Down' },
+  battery_low:       { color: '#f59e0b', bg: 'rgba(245,158,11,0.08)',  label: 'Bat. Low' },
+  upload_fail:       { color: '#ef4444', bg: 'rgba(239,68,68,0.08)',   label: 'Upload Fail' },
+  upload_success:    { color: '#00d4aa', bg: 'rgba(0,212,170,0.08)',   label: 'Uploaded' },
 }
+const DEFAULT_META = { color: '#64748b', bg: 'rgba(100,116,139,0.08)', label: 'Event' }
 
-function getEventStyle(type: string) {
-  return eventColors[type] ?? { bg: 'rgba(255,255,255,0.05)', text: '#94a3b8', icon: '📋' }
-}
+function getMeta(type: string) { return EVENT_META[type] ?? DEFAULT_META }
 
-function timeSince(dateStr: string) {
+function timeSince(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
+  const sec = Math.floor(diff / 1000)
+  if (sec < 60) return `${sec}s ago`
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`
   return new Date(dateStr).toLocaleDateString()
+}
+
+// SVG icon for event type
+function EventIcon({ type }: { type: string }) {
+  const color = getMeta(type).color
+  switch (type) {
+    case 'boot': return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 12a11.05 11.05 0 0 0-22 0zm-5 7a3 3 0 0 1-6 0v-7"/></svg>
+    case 'gps_fix': return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+    case 'lte_connected': return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1.46 5a11 11 0 0 1 21.08 0"/><path d="M5 8.3a7 7 0 0 1 14 0"/><path d="M8.53 11.6a3 3 0 0 1 6.95 0"/><circle cx="12" cy="15" r="1"/></svg>
+    case 'lte_disconnected': return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.56 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/></svg>
+    case 'battery_low': return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="6" width="18" height="12" rx="2"/><path d="M23 13v-2"/></svg>
+    default: return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+  }
 }
 
 export default function Events() {
   const [events, setEvents] = useState<SystemEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<string>('all')
+  const [filter, setFilter] = useState('all')
 
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetch = async () => {
       const { data } = await supabase
         .from('system_events')
         .select('*')
         .order('timestamp', { ascending: false })
         .limit(100)
-
       if (data) setEvents(data as SystemEvent[])
       setLoading(false)
     }
-    fetchEvents()
+    fetch()
 
-    const channel = supabase
-      .channel('system_events_changes')
+    const ch = supabase.channel('events_live')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'system_events' }, (payload) => {
         setEvents(prev => [payload.new as SystemEvent, ...prev].slice(0, 100))
       })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => { supabase.removeChannel(ch) }
   }, [])
 
-  const eventTypes = ['all', ...Array.from(new Set(events.map(e => e.event_type)))]
+  const types = ['all', ...Array.from(new Set(events.map(e => e.event_type)))]
   const filtered = filter === 'all' ? events : events.filter(e => e.event_type === filter)
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#0f172a' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
+
       {/* Header */}
       <div style={{
-        padding: '20px 24px', background: 'rgba(255,255,255,0.03)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0,
+        padding: '16px 24px', background: 'var(--bg-surface)',
+        borderBottom: '1px solid var(--border)', flexShrink: 0,
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
           <div>
-            <h2 style={{ color: '#fff', fontSize: '20px', fontWeight: 700, margin: 0 }}>📋 System Events</h2>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', margin: '2px 0 0' }}>
-              Real-time device event log
+            <h2 style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>
+              Event Log
+            </h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '3px 0 0' }}>
+              {filtered.length} events · Real-time stream
             </p>
           </div>
-          <div style={{
-            background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
-            borderRadius: '100px', padding: '4px 12px', color: '#22c55e', fontSize: '12px', fontWeight: 600,
-          }}>
-            🔴 LIVE
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div className="anim-blink" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 6px #ef4444' }} />
+            <span style={{ color: '#ef4444', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em' }}>LIVE</span>
           </div>
         </div>
 
         {/* Filter chips */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {eventTypes.map(type => {
-            const style = getEventStyle(type)
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {types.map(type => {
+            const meta = getMeta(type)
             const active = filter === type
             return (
               <button
                 key={type}
                 onClick={() => setFilter(type)}
                 style={{
-                  padding: '5px 12px', borderRadius: '100px', fontSize: '11px', fontWeight: 600,
-                  border: `1px solid ${active ? style.text : 'rgba(255,255,255,0.1)'}`,
-                  background: active ? style.bg : 'transparent',
-                  color: active ? style.text : 'rgba(255,255,255,0.4)',
-                  cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em',
-                  transition: 'all 0.15s',
+                  padding: '4px 10px', borderRadius: '100px',
+                  fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em',
+                  border: `1px solid ${active ? meta.color + '60' : 'var(--border)'}`,
+                  background: active ? meta.bg : 'transparent',
+                  color: active ? meta.color : 'var(--text-muted)',
+                  cursor: 'pointer', transition: 'all 0.15s',
+                  display: 'flex', alignItems: 'center', gap: '5px',
                 }}
               >
-                {type === 'all' ? '🔍 All' : `${style.icon} ${type}`}
+                {type !== 'all' && <EventIcon type={type} />}
+                {type === 'all' ? 'All Events' : meta.label}
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* Event List */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {/* Event stream */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {loading ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '40px', justifyContent: 'center' }}>
-            <div>⏳ Loading events...</div>
-          </div>
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className={`skeleton delay-${Math.min(i + 1, 4)}`} style={{ height: '58px' }} />
+          ))
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', marginTop: '60px' }}>
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📭</div>
-            <div>No events recorded yet</div>
-            <div style={{ fontSize: '12px', marginTop: '4px' }}>Events will appear here when the truck connects</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px' }}>
+            <div style={{
+              width: '48px', height: '48px',
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No events recorded</div>
+            <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Events appear here when the device connects</div>
           </div>
         ) : (
-          filtered.map((event) => {
-            const style = getEventStyle(event.event_type)
+          filtered.map((event, i) => {
+            const meta = getMeta(event.event_type)
             return (
               <div
                 key={event.id}
+                className={`anim-fade-up delay-${Math.min(i % 4 + 1, 4)}`}
                 style={{
                   display: 'flex', alignItems: 'flex-start', gap: '12px',
-                  background: style.bg,
-                  border: `1px solid ${style.text}30`,
-                  borderRadius: '12px', padding: '14px 16px',
-                  transition: 'transform 0.15s',
+                  background: meta.bg,
+                  border: `1px solid ${meta.color}20`,
+                  borderRadius: 'var(--radius-md)',
+                  padding: '12px 14px',
                 }}
               >
-                <span style={{ fontSize: '20px', flexShrink: 0 }}>{style.icon}</span>
+                {/* Icon in circle */}
+                <div style={{
+                  width: '28px', height: '28px', borderRadius: '50%',
+                  background: `${meta.color}15`,
+                  border: `1px solid ${meta.color}30`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}>
+                  <EventIcon type={event.event_type} />
+                </div>
+
+                {/* Content */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                    <span style={{
-                      color: style.text, fontSize: '12px', fontWeight: 700,
-                      textTransform: 'uppercase', letterSpacing: '0.08em',
-                    }}>
-                      {event.event_type}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ color: meta.color, fontSize: '12px', fontWeight: 700, letterSpacing: '0.04em' }}>
+                      {meta.label}
                     </span>
-                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '11px', flexShrink: 0 }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '10px', flexShrink: 0, fontFamily: "'JetBrains Mono', monospace" }}>
                       {timeSince(event.timestamp)}
                     </span>
                   </div>
                   {event.payload && Object.keys(event.payload).length > 0 && (
                     <div style={{
-                      marginTop: '6px', color: 'rgba(255,255,255,0.5)', fontSize: '12px',
-                      fontFamily: 'monospace', wordBreak: 'break-all',
-                      background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '6px 10px',
+                      color: 'var(--text-secondary)', fontSize: '11px',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      background: 'rgba(0,0,0,0.2)', borderRadius: '4px',
+                      padding: '4px 8px', wordBreak: 'break-all',
                     }}>
                       {JSON.stringify(event.payload)}
                     </div>

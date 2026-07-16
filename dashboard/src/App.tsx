@@ -11,34 +11,41 @@ import type { Session } from '@supabase/supabase-js'
 function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isSimulatedLogin, setIsSimulatedLogin] = useState(false)
 
   useEffect(() => {
-    const handleSimulate = () => setIsSimulatedLogin(true)
-    window.addEventListener('simulate-login', handleSimulate)
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
     })
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
     })
 
-    return () => {
-      subscription.unsubscribe()
-      window.removeEventListener('simulate-login', handleSimulate)
-    }
+    return () => { subscription.unsubscribe() }
   }, [])
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        background: 'var(--bg-base)', gap: '16px',
+      }}>
+        <div style={{
+          width: '40px', height: '40px',
+          border: '2px solid var(--border)',
+          borderTopColor: 'var(--accent)',
+          borderRadius: '50%',
+        }} className="anim-spin" />
+        <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: 0 }}>
+          Initializing system...
+        </p>
+      </div>
+    )
   }
 
-  if (!session && !isSimulatedLogin) {
+  if (!session) {
     return <Login />
   }
 
